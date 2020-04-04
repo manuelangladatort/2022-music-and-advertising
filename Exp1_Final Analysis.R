@@ -13,8 +13,8 @@ library(lmerTest)
 library(tidyverse)
 library(multcomp)
 # Datasets: Data.Exp1.ttest + Data.Exp1.glmer
-Data.Exp1.ttest <- read_excel("Datasets/Data.Exp1.ttest.xlsx") #or load manually
-Data.Exp1.glmer <- read_excel("Datasets/Data.Exp1.glmer.xlsx") #or load manually
+Data.Exp1.ttest <- read_excel("data/Data.Exp1.ttest.xlsx") #or load manually
+Data.Exp1.glmer <- read_excel("data/Data.Exp1.glmer.xlsx") #or load manually
 
 # Analysis 1: Critical pairs only - t-test
 Data.Exp1.ttest$Participant= as.factor(Data.Exp1.ttest$id)
