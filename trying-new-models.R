@@ -1,13 +1,13 @@
 #changin data again
 library(tidyverse)
+library(readxl)
+library(car)
+library(lme4)
+library(lmerTest)
+library(multcomp)
 
 #solving the issue
-Data.Exp2.glmer %>%
-    group_by(IV,Position) %>%
-    summarize(total= sum(as.numeric(Choice),na.rm=T),
-              count= n(),
-              mean= mean(as.numeric(Choice),na.rm=T),
-              sd= sd(as.numeric(Choice),na.rm=T))
+Data.Exp2.glmer <- read_excel("data/Data.Exp2.glmer.xlsx") #or load manually
 
 Data.Exp2.glmer$Choice <- as.numeric(Data.Exp2.glmer$Choice )
 Data.Exp2.glmer$Recognition <- as.factor(Data.Exp2.glmer$Recognition)
@@ -19,6 +19,62 @@ Data.Exp2.glmer$Task <- as.factor(Data.Exp2.glmer$Task)
 Data.Exp2.glmer$Clip <- as.factor(Data.Exp2.glmer$Clip)
 Data.Exp2.glmer$BrandCategory <- as.factor(Data.Exp2.glmer$BrandCategory)
 
+Data.Exp2.glmer$IV <- paste(Data.Exp2.glmer$Clip,Data.Exp2.glmer$Recognition,sep="-")
+table(Data.Exp2.glmer$IV,useNA="ifany")
+Data.Exp2.glmer$IV <- as.factor(Data.Exp2.glmer$IV)
+
+Data.Exp2.glmer$IV <- relevel(Data.Exp2.glmer$IV, ref= "NCL-Learned")
+
+Data.Exp2.glmer %>%
+    group_by(IV,Position) %>%
+    summarize(total= sum(as.numeric(Choice),na.rm=T),
+              count= n(),
+              mean= mean(as.numeric(Choice),na.rm=T),
+              sd= sd(as.numeric(Choice),na.rm=T))
+
+## brm
+library(brms)
+General.brm.Exp2<- brm(Choice ~ 0+IV+Position + (1 | id)+(1|Brand) + (1|Song),
+                         data=Data.Exp2.glmer, cores= 4,
+                         iter= 8000, control= list(max_treedepth = 10, adapt_delta=0.99),
+                         family = bernoulli()) #there is sth wrong!
+summary(General.brm.Exp2)
+plot(General.brm.Exp2, pars = c("IV", "Position")) 
+plot(conditional_effects(General.brm.Exp2, effects = "IV:Position"))
+
+## glmer
+General.glmer.Exp2<- glmer(Choice ~ IV + Position + (1 | id)+(1|Brand) + (1|Song),
+                              data=Data.Exp2.glmer, family= binomial,nAGQ=0)
+
+Anova(General.glmer.Exp2,Type="III")
+summary(General.glmer.Exp2)
+
+library(emmeans)
+emmip(General.glmer.Exp2, Position ~ IV)
+emmeans(General.glmer.Exp2, pairwise ~ Position : IV)
+
+model2.E2.CR.predictions= round(predict(General.glmer.Exp2,type="response")) #calculate model's classification accuracy
+acc.table.model2.E2.CR= table(na.omit(Data.Exp2.glmer$Choice), model2.E2.CR.predictions) #compare the predictions agaisnt the actual data
+accuracy.model2.E2.CR= sum(diag(acc.table.model2.E2.CR))/sum(acc.table.model2.E2.CR) #compute the accuracy of this table
+accuracy.model2.E2.CR #.647
+
+#psothoc using HOLM
+summary(glht(General.glmer.Exp2, linfct = mcp(IV = "Tukey")), test = adjusted("holm")) #h
+
+
+
+
+General.glmer.Exp2c<- glmer(Choice ~ IV * Position + (1 | id)+(1|Brand) + (1|Song),
+                            data=Data.Exp2.glmer, family= binomial,nAGQ=0 )
+Anova(General.glmer.Exp2c,Type="III")
+summary(General.glmer.Exp2c)
+
+emmip(General.glmer.Exp2c, Position ~ IV)
+
+emmeans(General.glmer.Exp2c, pairwise ~ Position : IV)
+
+
+### arranging data again: I get same results
 data.original <- Data.Exp2.glmer %>% filter(Task == "Choice") %>% 
     drop_na(Choice) %>% 
     dplyr::select(-Age,-Gender,-IV)
@@ -32,11 +88,11 @@ data.pos2 <- data.original %>% filter(Position == "Second")  %>%
     rename(Song.Pos2 = Song) %>% rename(Brand.Pos2 = Brand) %>%
     mutate(LearnPos2 = as.factor(ifelse(Recognition == "Learned", 1, 0))) %>%
     mutate(NovelPos2 = as.factor(ifelse(Recognition == "Novel", 1, 0)))
-    
+
 data2.final <- merge(data.pos1,data.pos2,by=c("id","Trial","BrandCategory","Combination"))
 data2.final <- as_tibble(data2.final) # 129 participants
 data2.final.corrected <- data2.final %>% mutate(ChosenPosition = as.numeric(ifelse(Choice.Pos1 == 1, 0,
-                                        ifelse(Choice.Pos2 == 1, 1, "NA")))) %>%
+                                                                                   ifelse(Choice.Pos2 == 1, 1, "NA")))) %>%
     rename(Clip = Clip.x) 
 
 is.na(data2.final.corrected$ChosenPosition)
@@ -72,51 +128,4 @@ BRM.Exp2.Novel <-  brm(ChosenPosition ~ 0+NovelPos1 : NovelPos2 + (1 | id)+(1|Br
 summary(BRM.Exp2.Novel)
 plot(BRM.Exp2.Novel, pars = c("NovelPos1", "NovelPos2")) 
 plot(conditional_effects(BRM.Exp2.Novel, effects = "NovelPos1:NovelPos2"))
-
-
-##
-
-General.brm.Exp2<- brm(Choice ~ 0+IV+Position + (1 | id)+(1|Brand) + (1|Song),
-                         data=Data.Exp2.glmer, cores= 4,
-                         iter= 8000, control= list(max_treedepth = 10, adapt_delta=0.99),
-                         family = bernoulli()) #there is sth wrong!
-summary(General.brm.Exp2)
-plot(General.brm.Exp2, pars = c("IV", "Position")) 
-plot(conditional_effects(General.brm.Exp2, effects = "IV:Position"))
-
-
-General.glmer.Exp2b<- glmer(Choice ~ IV + Position + (1 | id)+(1|Brand) + (1|Song),
-                              data=Data.Exp2.glmer, family= binomial,nAGQ=0 )
-Anova(General.glmer.Exp2b,Type="III")
-summary(General.glmer.Exp2b)
-
-General.glmer.Exp1b<- glmer(Choice ~ IV + Position + (1 | id)+(1|Brand) + (1|Song),
-                            data=Data.Exp1.glmer, family= binomial,nAGQ=0 )
-Anova(General.glmer.Exp1b,Type="III")
-summary(General.glmer.Exp1b)
-
-
-library(emmeans)
-emmip(General.glmer.Exp2b, Position ~ IV)
-emmeans(General.glmer.Exp2b, pairwise ~ Position : IV)
-
-model2.E2.CR.predictions= round(predict(General.glmer.Exp2b,type="response")) #calculate model's classification accuracy
-acc.table.model2.E2.CR= table(na.omit(Data.Exp2.glmer$Choice), model2.E2.CR.predictions) #compare the predictions agaisnt the actual data
-accuracy.model2.E2.CR= sum(diag(acc.table.model2.E2.CR))/sum(acc.table.model2.E2.CR) #compute the accuracy of this table
-accuracy.model2.E2.CR #.647
-
-#psothoc using HOLM
-summary(glht(General.glmer.Exp2b, linfct = mcp(IV = "Tukey")), test = adjusted("holm")) #h
-
-
-
-
-General.glmer.Exp2c<- glmer(Choice ~ IV * Position + (1 | id)+(1|Brand) + (1|Song),
-                            data=Data.Exp2.glmer, family= binomial,nAGQ=0 )
-Anova(General.glmer.Exp2c,Type="III")
-summary(General.glmer.Exp2c)
-
-emmip(General.glmer.Exp2c, Position ~ IV)
-
-emmeans(General.glmer.Exp2c, pairwise ~ Position : IV)
 
