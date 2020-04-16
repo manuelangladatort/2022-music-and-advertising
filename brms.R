@@ -31,7 +31,7 @@ table(Data.Exp2.glmer$IV,useNA="ifany")
 Data.Exp2.glmer$IV <- as.factor(Data.Exp2.glmer$IV)
 Data.Exp2.glmer$IV <- relevel(Data.Exp2.glmer$IV, ref= "NCL-Learned")
 
-Data.Exp2.glmer %>%
+Data.Exp1.glmer %>%
     group_by(IV,Position) %>%
     summarize(total= sum(as.numeric(Choice),na.rm=T),
               count= n(),

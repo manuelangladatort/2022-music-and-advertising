@@ -1,6 +1,7 @@
+# Analysis code
 #####
-# ANALYSIS EXPERIMENT 2
-options(digits= 3)
+# ANALYSIS EXPERIMENT 1
+options(digits= 4)
 options(scipen=999)
 set.seed(12345)
 
@@ -18,21 +19,115 @@ library(sjmisc)
 library(loo)
 library(performance)
 library(ggpubr)
+library(lsmeans)
+
+# Datasets exp 1:
+Data.Exp1.ttest <- read_excel("data/Data.Exp1.ttest.xlsx") 
+Data.Exp1.brm <- read_excel("data/Data.Exp1.brm.xlsx") 
+# Datasets exp 2: 
+Data.Exp2.ttest <- read_excel("data/Data.Exp2.ttest.xlsx") 
+Data.Exp2.brm <- read_excel("data/Data.Exp2.brm.xlsx")
+Data.Exp2.Liking <- read_excel("data/Data.Exp2.Liking.xlsx") 
+
+# Analysis Experiment 1 - Exp1: Critical pairs only - t-test
+Data.Exp1.ttest$Participant= as.factor(Data.Exp1.ttest$id)
+Data.Exp1.ttest$Recognition <- as.factor(Data.Exp1.ttest$Recognition)
+Data.Exp1.ttest$Mean <- as.numeric(Data.Exp1.ttest$Mean)
+
+Data.Exp1.ttest %>%
+    group_by(Recognition) %>%
+    summarize(total= sum(as.numeric(Mean),na.rm=T),
+              count= n(),
+              mean= mean(as.numeric(Mean),na.rm=T),
+              sd= sd(as.numeric(Mean),na.rm=T))
+# Absolute Percentages: 59% and 41%
+# Absolute difference: 9%
+# the % relative increase is 18% (59/ 50= 1.18)
+# odds ratio 1.44 ((59/41)/(50/50))
+
+t.test.Exp1 <- t.test(Mean ~ Recognition, data = Data.Exp1.ttest, paired = TRUE)
+t.test.Exp1
+
+t.Exp1<- t.test.Exp1$statistic[[1]]
+t.Exp1
+df.Exp1<- t.test.Exp1$parameter[[1]]
+df.Exp1
+r.Exp1 <- sqrt(t.Exp1^2/(t.Exp1^2+df.Exp1))
+round(r.Exp1, 3)
+
+# Analysis 2 - Exp1: General model - brms
+names.exp1 <- c("Recognition","id","Song","Brand","Position","Task","Clip",
+                "Combination","BrandCategory","Trial","IV")
+Data.Exp1.brm[,names.exp1] <- lapply(Data.Exp1.brm[,names.exp1] , factor)
+table(Data.Exp1.brm$IV,useNA="ifany")
+Data.Exp1.brm$IV <- relevel(Data.Exp1.brm$IV, ref= "NCL-Learned")
+Data.Exp1.brm
+
+General.brm.Exp1<- brm(Choice ~ 0+IV+Position + (1 |id) + (1|Brand) + (1|Song),
+                       data=Data.Exp1.brm, cores= 4,
+                       iter= 8000, control= list(max_treedepth = 10, adapt_delta=0.99),
+                       family = bernoulli()) 
+summary(General.brm.Exp1)
+plot(General.brm.Exp1, pars = c("IV", "Position")) 
+plot(marginal_effects(General.brm.Exp1), points = TRUE, rug = TRUE)
+plot(conditional_effects(General.brm.Exp1, effects = "IV:Position"))
+#effect size
+tidy_stan(General.brm.Exp1) 
+r2_bayes(General.brm.Exp1) #R2c= 0.1; R2m= 0.047
+
+# plotting
+data_plot_exp1 <- tibble(
+    ChoiceCondition = as.factor(c("critical-learned","critical-novel","noncritical-learned", "noncritical-novel")),
+    BRM_estimate = as.numeric(c("0.06","-0.67","-0.33", "-0.32")),
+    lower_ci = as.numeric(c("-0.49 ","-1.21 ","-0.85 ", "-0.84")),
+    higher_ci = as.numeric(c("0.60","-.14","0.20", ".21 ")))
+
+plot_brm_exp1 <- ggplot(data_plot_exp1, aes(x= ChoiceCondition, y= BRM_estimate,  fill = ChoiceCondition)) +
+    geom_bar(stat="identity",color="black",position=position_dodge()) +
+    geom_errorbar(aes(ymin= lower_ci, ymax= higher_ci), width= .2,
+                  position=position_dodge(.9)) +
+    scale_fill_manual(values=c("#E69F00", "#56B4E9","#E69F00", "#56B4E9")) +
+    ylab("Model estimates") +
+    xlab("Choice condition") +
+    ylim(-1.22,1) +
+    theme_bw()
+
+plot_brm_exp1 <- plot_brm_exp1 + theme(legend.position = "none",
+    axis.text=element_text(size=12),
+    axis.title=element_blank(), plot.title = element_text(color = "black", size = 12,hjust = 0.5)) +
+    ggtitle("Experiment 1")
 
 
-# Datasets: Data.Exp1.ttest + Data.Exp1.glmer
-Data.Exp2.ttest <- read_excel("data/Data.Exp2.ttest.xlsx") #or load manually
-Data.Exp2.glmer <- read_excel("data/Data.Exp2.glmer.xlsx") #or load manually
-Data.Exp2.Liking <- read_excel("data/Data.Exp2.Liking.xlsx") #or load manually
-Data.Exp2.Correlations <- read_excel("data/Data.Exp2.Correlations.xlsx") #or load manually
+#########
+#Figures - Figure 1
+source("summarySE.R")
+#Figure 1
+Exp1.Figure1.Songs.Data<- summarySE(Data.Exp1.glmer, measurevar="Choice",groupvars=c("Song","Position"))
+Exp1.Figure1.Songs.Data <- na.omit(Exp1.Figure1.Songs.Data)
 
-# Analysis 1: Critical pairs only - t-test
+plot.Exp1.Figure1.Songs<- ggplot(data=Exp1.Figure1.Songs.Data, aes(x=reorder(Song, Choice), y=Choice, fill= Position)) +
+    geom_bar(stat="identity", color="black", position=position_dodge())+
+    geom_errorbar(aes(ymin=Choice-ci, ymax=Choice+ci), width=.2,
+                  position=position_dodge(.9)) +
+    scale_fill_manual(values=c("#E69F00", "#56B4E9")) +
+    ylim(0,1) +
+    theme_bw()
+
+plot.Exp1.Figure1.Songs + theme(axis.text=element_text(size=14), axis.title=element_text(size=12),
+                                axis.title.x = element_blank()) + labs(fill = "Presentation\nPosition") 
+
+ggsave("plot.Exp1.Figure1.Songs.pdf", width=25, height=18, units = c("cm"),
+       dpi=300, device = "pdf")
+
+#########
+#########
+# Analysis 1 - Exp2: Critical pairs only - t-test
 Data.Exp2.ttest$Participant= as.factor(Data.Exp2.ttest$id)
 Data.Exp2.ttest$Recognition <- as.factor(Data.Exp2.ttest$Recognition)
 Data.Exp2.ttest$Mean <- as.numeric(Data.Exp2.ttest$Mean)
 contrasts(Data.Exp2.ttest$Recognition)<-contr.sum
 
-detach(package:plyr) #if I have problems because loadfed summarySE first
+detach(package:plyr) #if I have problems because loading summarySE 
 Data.Exp2.ttest %>%
     group_by(Recognition) %>%
     summarize(total= sum(as.numeric(Mean),na.rm=T),
@@ -55,108 +150,70 @@ df.Exp2
 r.Exp2 <- sqrt(t.Exp2^2/(t.Exp2^2+df.Exp2))
 round(r.Exp2, 3)
 
-# Analysis 2: General model - GLMER
-Data.Exp2.glmer$Choice <- as.numeric(Data.Exp2.glmer$Choice )
-Data.Exp2.glmer$Recognition <- as.factor(Data.Exp2.glmer$Recognition)
-Data.Exp2.glmer$id <- as.factor(Data.Exp2.glmer$id)
-Data.Exp2.glmer$Song <- as.factor(Data.Exp2.glmer$Song)
-Data.Exp2.glmer$Brand <- as.factor(Data.Exp2.glmer$Brand)
-Data.Exp2.glmer$Position <- as.factor(Data.Exp2.glmer$Position)
-Data.Exp2.glmer$BrandCategory <- as.factor(Data.Exp2.glmer$BrandCategory)
+# Analysis 2 -  Exp2: General model: brms
+names.exp2 <- c("Recognition","id","Song","Brand","Position","Task","Clip",
+                "Combination","BrandCategory","Trial","IV")
+Data.Exp2.brm[,names.exp2] <- lapply(Data.Exp2.brm[,names.exp2] , factor)
+table(Data.Exp2.brm$IV,useNA="ifany")
+Data.Exp2.brm$IV <- relevel(Data.Exp2.brm$IV, ref= "NCL-Learned")
+Data.Exp2.brm
 
-Data.Exp2.glmer$IV <- paste(Data.Exp2.glmer$Clip,Data.Exp2.glmer$Recognition,sep="-")
-table(Data.Exp2.glmer$IV,useNA="ifany")
-Data.Exp2.glmer$IV <- as.factor(Data.Exp2.glmer$IV)
-contrasts(Data.Exp2.glmer$IV)<-contr.sum
+General.brm.Exp2<- brm(Choice ~ 0+IV+Position + (1 |id) + (1|Brand) + (1|Song),
+                       data=Data.Exp2.brm, cores= 4,
+                       iter= 8000, control= list(max_treedepth = 10, adapt_delta=0.99),
+                       family = bernoulli()) 
+summary(General.brm.Exp2)
+plot(General.brm.Exp2, pars = c("IV", "Position")) 
+plot(marginal_effects(General.brm.Exp2), points = TRUE, rug = TRUE)
+plot(conditional_effects(General.brm.Exp2, effects = "IV:Position"))
+#effect size
+tidy_stan(General.brm.Exp2) 
+r2_bayes(General.brm.Exp2) #R2c= 0.1; R2m= 0.047
 
-General.glmer.Exp2<- glmer(Choice ~ IV+ Position + Brand + Song + 
-                               (1|id),data=Data.Exp2.glmer, family= binomial)
-Anova(General.glmer.Exp2,Type="III")
-summary(General.glmer.Exp2)
+# plotting
+data_plot_exp2 <- tibble(
+    ChoiceCondition = as.factor(c("critical-learned","critical-novel","noncritical-learned", "noncritical-novel")),
+    BRM_estimate = as.numeric(c(".42","-.36","0", "0")),
+    lower_ci = as.numeric(c("-0.12 ","-.9","-.39", "-.40")),
+    higher_ci = as.numeric(c(".96",".18",".40", ".40")))
 
-model2.E2.CR.predictions= round(predict(General.glmer.Exp2,type="response")) #calculate model's classification accuracy
-acc.table.model2.E2.CR= table(na.omit(Data.Exp2.glmer$Choice), model2.E2.CR.predictions) #compare the predictions agaisnt the actual data
-accuracy.model2.E2.CR= sum(diag(acc.table.model2.E2.CR))/sum(acc.table.model2.E2.CR) #compute the accuracy of this table
-accuracy.model2.E2.CR #.647
-
-#psothoc using HOLM
-summary(glht(General.glmer.Exp2, linfct = mcp(IV = "Tukey")), test = adjusted("holm")) #holm correction
-summary(glht(General.glmer.Exp2, linfct = mcp(Song = "Tukey")), test = adjusted("holm")) #holm correction 
-summary(glht(General.glmer.Exp2, linfct = mcp(Brand = "Tukey")), test = adjusted("holm")) #holm correction
-summary(glht(General.glmer.Exp2, linfct = mcp(Position = "Tukey")), test = adjusted("holm")) #holm correction
-
-detach(package:plyr) #if I have problems because loadfed summarySE first
-Data.Exp2.glmer %>%
-    group_by(IV) %>%
-    summarize(total= sum(as.numeric(Choice),na.rm=T),
-              count= n(),
-              mean= mean(as.numeric(Choice),na.rm=T),
-              sd= sd(as.numeric(Choice),na.rm=T))
-
-Data.Exp2.glmer %>%
-    group_by(Position) %>%
-    summarize(total= sum(as.numeric(Choice),na.rm=T),
-              count= n(),
-              mean= mean(as.numeric(Choice),na.rm=T),
-              sd= sd(as.numeric(Choice),na.rm=T))
-#######
-#Figure 3
-source("summarySE.R")
-
-#Figure 3a position 1
-DataExp2_LearnedSongs_P1 <- Data.Exp2.glmer %>% filter( Position == "First")
-DataExp2_LearnedSongs_P2 <- Data.Exp2.glmer %>% filter( Position == "Second")
-
-Exp2.Figure1.P1.Data<- summarySE(DataExp2_LearnedSongs_P1, measurevar="Choice",groupvars=c("IV"))
-plot.Exp2.Figure3.Position1 <- ggplot(data=Exp2.Figure1.P1.Data, aes(x=IV, y=Choice, fill= IV)) +
-    geom_bar(stat="identity",color="black",position=position_dodge())+
-    scale_fill_manual(values=c("#56B4E9","#56B4E9", "#E69F00", "#E69F00")) +
-    geom_errorbar(aes(ymin=Choice-ci, ymax=Choice+ci), width=.2,
+plot_brm_exp2 <- ggplot(data_plot_exp2, aes(x= ChoiceCondition, y= BRM_estimate,  fill = ChoiceCondition)) +
+    geom_bar(stat="identity",color="black",position=position_dodge()) +
+    geom_errorbar(aes(ymin= lower_ci, ymax= higher_ci), width= .2,
                   position=position_dodge(.9)) +
-    ylim(0,1) +
-    labs(x="Condition", y = "Mean choice proportion (Position 1)")+
+    scale_fill_manual(values=c("#E69F00", "#56B4E9","#E69F00", "#56B4E9")) +
+    ylab("Model estimates") +
+    xlab("Choice condition") +
+    ylim(-1.22,1) +
     theme_bw()
 
-plot.Exp2.Figure3.Position1 + theme(axis.text=element_text(size=14), axis.title=element_blank(), legend.position="none")
+plot_brm_exp2 <- plot_brm_exp2 + theme(legend.position = "none",
+                      axis.text=element_text(size=12),
+                      axis.title=element_blank(), plot.title = element_text(color = "black", size = 12,hjust = 0.5)) +
+    ggtitle("Experiment 2")
 
-ggsave("plot.Exp2.Figure3.Position1.pdf", width=16, height=19, units = c("cm"),
+plots_brm_exp1and2 <- ggarrange(plot_brm_exp1,plot_brm_exp2, ncol=1, nrow=2)
+ggsave("plots_brm_exp1and2.pdf", width=20, height=15, units = c("cm"),
        dpi=300, device = "pdf")
 
-#Figure 3b position 2
-Exp2.Figure1.P2.Data<- summarySE(DataExp2_LearnedSongs_P2, measurevar="Choice",groupvars=c("IV"))
-plot.Exp2.Figure3.Position2 <- ggplot(data=Exp2.Figure1.P2.Data, aes(x=IV, y=Choice, fill= IV)) +
-    geom_bar(stat="identity",color="black",position=position_dodge())+
-    scale_fill_manual(values=c("#56B4E9","#56B4E9", "#E69F00", "#E69F00")) +
-    geom_errorbar(aes(ymin=Choice-ci, ymax=Choice+ci), width=.2,
-                  position=position_dodge(.9)) +
-    ylim(0,1) +
-    labs(x="Condition", y = "Mean choice proportion (Position 2)")+
-    theme_bw()
+# Analysis 3 - Exp2: Adittional music infomration
+names.exp2 <- c("Recognition","id","Song","Brand","Position","Task","Clip",
+                "Combination","BrandCategory","Trial","IV")
+Data.Exp2.Liking[,names.exp2] <- lapply(Data.Exp2.Liking[,names.exp2] , factor)
+Data.Exp2.Liking
 
-plot.Exp2.Figure3.Position2 + theme(axis.text=element_text(size=14), axis.title=element_blank(), legend.position="none")
-
-ggsave("plot.Exp2.Figure3.Position2.pdf", width=16, height=19, units = c("cm"),
-       dpi=300, device = "pdf")
-#######
-
-# Analysis 3: Adittional music infomration
 Data.Exp2.Liking <- Data.Exp2.Liking %>%
     mutate(Preference = ifelse(Response %in% 1:2, "Low",
                                ifelse(Response %in% 2:3, "Medium", "High")))
-summary(factor(Data.Exp2.Liking$Preference))
 Data.Exp2.Liking$Preference <- factor(Data.Exp2.Liking$Preference, levels = c("Low", "Medium", "High"))
-
 Data.Exp2.Liking_CR <- Data.Exp2.Liking %>% filter(Clip == "CR")
 Data.Exp2.Liking_CR$Choice <- as.numeric(as.character(Data.Exp2.Liking_CR$Choice))
 
-ANOVA.Exp2.Liking <- lm(Choice ~ as.numeric(Preference)*as.factor(Recognition), data = Data.Exp2.Liking_CR) #note Prefernece as NUMERIC
+ANOVA.Exp2.Liking <- lm(Choice ~ Preference*Recognition, data = Data.Exp2.Liking_CR)
 Anova(ANOVA.Exp2.Liking, Type="III")
 summary.lm(ANOVA.Exp2.Liking)
-library(sjstats)
 anova_stats(ANOVA.Exp2.Liking)
 
-#Repeat using HOLM
-library(lsmeans)
 post.ANOVA.Exp2.MusicInfo.Pref <- glht(ANOVA.Exp2.Liking, lsm(pairwise ~ Preference))
 post.ANOVA.Exp2.MusicInfo.Pref.Holm = summary(post.ANOVA.Exp2.MusicInfo.Pref, test=adjusted("holm"))
 post.ANOVA.Exp2.MusicInfo.Pref.Holm
@@ -180,13 +237,6 @@ Data.Exp2.Liking_CR %>%
               sd= sd(as.numeric(Choice),na.rm=T),
               count=n())
 
-Data.Exp2.Liking_CR %>%
-    group_by(Recognition) %>%
-    summarize(total= sum(as.numeric(Choice),na.rm=T),
-              mean= mean(as.numeric(Choice),na.rm=T),
-              sd= sd(as.numeric(Choice),na.rm=T),
-              count=n())
-
 #Figure 4
 Figure4_MusicInformation_Data<- summarySE(Data.Exp2.Liking_CR,measurevar="Choice",groupvars=c("Preference","Recognition"))
 
@@ -199,14 +249,14 @@ plot.Exp2.Figure4 <- ggplot(data=Figure4_MusicInformation_Data, aes(x=factor(Pre
     labs(x="Condition", y = "Liking")+
     theme_bw()
 
-plot.Exp2.Figure4 + 
-    theme(axis.text=element_text(size=14),legend.text=element_text(size=14),
+plot.Exp2.Figure4 <- plot.Exp2.Figure4 + 
+    theme(axis.text=element_text(size=12),legend.text=element_text(size=12),
           axis.title=element_blank())
-
-ggsave("plot.Exp2.Figure4.pdf", width=28, height=19, units = c("cm"),
+   
+ggsave("plot.Exp2.Figure4.pdf", width=20, height=15, units = c("cm"),
        dpi=300, device = "pdf")
 
-# non-compensatory: individual participant level
+# Analysis 4 - Exp2: individual participant level
 Data.Exp2.Liking_CR_low <- Data.Exp2.Liking_CR %>% filter(Preference == "Low", Recognition == "Learned")
 Data.Exp2.Liking_CR_Med <- Data.Exp2.Liking_CR %>% filter(Preference == "Medium",Recognition == "Learned")
 Data.Exp2.Liking_CR_High <- Data.Exp2.Liking_CR %>% filter(Preference == "High",Recognition == "Learned")
@@ -228,7 +278,7 @@ Data.Exp2.Liking_CR_low_plot_yesno <- Data.Exp2.Liking_CR_low_plot %>%
 summary(factor(Data.Exp2.Liking_CR_low_plot_yesno$RH))
 
 Data.Exp2.Liking_CR_low_plot_yesno$meanChoice <- ifelse(Data.Exp2.Liking_CR_low_plot_yesno$meanChoice==0, 0.01,
-                                                 Data.Exp2.Liking_CR_low_plot_yesno$meanChoice)
+                                                        Data.Exp2.Liking_CR_low_plot_yesno$meanChoice)
 
 Figure5.plot.MusicInformation_Liking_LOW_yesno <- ggplot(Data.Exp2.Liking_CR_low_plot_yesno, aes(reorder(id, -meanChoice),y= meanChoice, fill=RH)) +
     geom_bar(stat="identity", width=0.2) +
@@ -287,7 +337,7 @@ Data.Exp2.Liking_CR_High_plot_yesno <- Data.Exp2.Liking_CR_High_plot %>%
 summary(factor(Data.Exp2.Liking_CR_High_plot_yesno$RH)) #No= 38 (30%)/ Yes= 89 (70%)
 
 Data.Exp2.Liking_CR_High_plot_yesno$meanChoice <- ifelse(Data.Exp2.Liking_CR_High_plot_yesno$meanChoice==0, 0.01,
-                                                        Data.Exp2.Liking_CR_High_plot_yesno$meanChoice)
+                                                         Data.Exp2.Liking_CR_High_plot_yesno$meanChoice)
 
 Figure5.plot.MusicInformation_Liking_HIGH_yesno <- ggplot(Data.Exp2.Liking_CR_High_plot_yesno, aes(reorder(id, -meanChoice),y= meanChoice, fill=RH)) +
     geom_bar(stat="identity", width=0.2) +
@@ -310,27 +360,3 @@ binom.test(8,43) #low
 binom.test(18,37) #Medium
 binom.test(23,89) #High
 
-# Analysis 4: Correlations
-### Choice and Recognition have to be 0/1
-####Choice: 0= not chosen vs. 1= chosen
-####Recognition: 0= novel vs. 1= learned
-Data.Exp2.Correlations$Liking <- as.numeric(Data.Exp2.Correlations$Liking)
-Data.Exp2.Correlations$Choice <- as.numeric(Data.Exp2.Correlations$Choice)
-Data.Exp2.Correlations$Recognition <- as.numeric(Data.Exp2.Correlations$Recognition)
-
-library(corrplot)
-res.Exp2<- cor(Data.Exp2.Correlations, use="complete.obs")
-res1.Exp2 <- cor.mtest(Data.Exp2.Correlations, conf.level = .95)
-res1.Exp2
-corrplot(res.Exp2, type = "upper", order = "hclust", p.mat=res1.Exp2$p,addCoef.col = "black",
-         tl.col = "black", tl.srt = 45)
-
-library(ppcor)
-pcor.test(Data.Exp2.Correlations$Choice, Data.Exp2.Correlations$Recognition, Data.Exp2.Correlations$Liking,  method = "pearson") #controlling for liking
-pcor.test(Data.Exp2.Correlations$Choice, Data.Exp2.Correlations$Liking, Data.Exp2.Correlations$Recognition,  method = "pearson") #controlling for recognition
-
-pcor.test(Data.Exp2.Correlations$Recognition, Data.Exp2.Correlations$Choice, Data.Exp2.Correlations$Liking,  method = "pearson") #controlling for liking
-pcor.test(Data.Exp2.Correlations$Recognition, Data.Exp2.Correlations$Liking, Data.Exp2.Correlations$Choice,  method = "pearson") #controlling for Choice
-
-pcor.test(Data.Exp2.Correlations$Liking, Data.Exp2.Correlations$Choice, Data.Exp2.Correlations$Recognition,  method = "pearson") #controlling for recognition
-pcor.test(Data.Exp2.Correlations$Liking, Data.Exp2.Correlations$Recognition, Data.Exp2.Correlations$Choice,  method = "pearson") #controlling for choice
