@@ -93,10 +93,9 @@ plot_brm_exp1 <- ggplot(data_plot_exp1, aes(x= ChoiceCondition, y= BRM_estimate,
     theme_bw()
 
 plot_brm_exp1 <- plot_brm_exp1 + theme(legend.position = "none",
-    axis.text=element_text(size=12),
-    axis.title=element_blank(), plot.title = element_text(color = "black", size = 12,hjust = 0.5)) +
+                                       axis.text=element_text(size=12),
+                                       axis.title=element_text(size=12), plot.title = element_text(color = "black", size = 12,hjust = 0.5)) +
     ggtitle("Experiment 1")
-
 
 #########
 #Figures - Figure 1
@@ -189,7 +188,7 @@ plot_brm_exp2 <- ggplot(data_plot_exp2, aes(x= ChoiceCondition, y= BRM_estimate,
 
 plot_brm_exp2 <- plot_brm_exp2 + theme(legend.position = "none",
                       axis.text=element_text(size=12),
-                      axis.title=element_blank(), plot.title = element_text(color = "black", size = 12,hjust = 0.5)) +
+                      axis.title=element_text(size=12), plot.title = element_text(color = "black", size = 12,hjust = 0.5)) +
     ggtitle("Experiment 2")
 
 plots_brm_exp1and2 <- ggarrange(plot_brm_exp1,plot_brm_exp2, ncol=1, nrow=2)
