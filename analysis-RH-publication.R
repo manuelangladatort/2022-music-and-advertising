@@ -1,11 +1,12 @@
 # Analysis code
+
 #####
 # ANALYSIS EXPERIMENT 1
 options(digits= 4)
 options(scipen=999)
 set.seed(12345)
 
-# Set working directory
+
 # Install/ load packages
 library(readxl)
 library(car)
@@ -98,6 +99,7 @@ plot_brm_exp1 <- plot_brm_exp1 + theme(legend.position = "none",
     ggtitle("Experiment 1")
 
 #########
+
 #Figures - Figure 1
 source("summarySE.R")
 #Figure 1
@@ -118,15 +120,16 @@ plot.Exp1.Figure1.Songs + theme(axis.text=element_text(size=14), axis.title=elem
 ggsave("plot.Exp1.Figure1.Songs.pdf", width=25, height=18, units = c("cm"),
        dpi=300, device = "pdf")
 
-#########
-#########
+
+#####
+# ANALYSIS EXPERIMENT 2
 # Analysis 1 - Exp2: Critical pairs only - t-test
 Data.Exp2.ttest$Participant= as.factor(Data.Exp2.ttest$id)
 Data.Exp2.ttest$Recognition <- as.factor(Data.Exp2.ttest$Recognition)
 Data.Exp2.ttest$Mean <- as.numeric(Data.Exp2.ttest$Mean)
 contrasts(Data.Exp2.ttest$Recognition)<-contr.sum
 
-detach(package:plyr) #if I have problems because loading summarySE 
+detach(package:plyr) #if you have problems because loading summarySE 
 Data.Exp2.ttest %>%
     group_by(Recognition) %>%
     summarize(total= sum(as.numeric(Mean),na.rm=T),
