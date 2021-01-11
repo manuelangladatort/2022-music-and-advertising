@@ -4,7 +4,6 @@ options(digits= 3)
 options(scipen=999)
 set.seed(12345)
 
-# Set working directory
 # Install/ load packages
 library(readxl)
 library(car)
