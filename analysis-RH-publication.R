@@ -1,11 +1,12 @@
 # Analysis code
+
 #####
 # ANALYSIS EXPERIMENT 1
 options(digits= 4)
 options(scipen=999)
 set.seed(12345)
 
-# Set working directory
+
 # Install/ load packages
 library(readxl)
 library(car)
@@ -96,15 +97,44 @@ plot_brm_exp1 <- plot_brm_exp1 + theme(legend.position = "none",
                                        axis.text=element_text(size=12),
                                        axis.title=element_text(size=12), plot.title = element_text(color = "black", size = 12,hjust = 0.5)) +
     ggtitle("Experiment 1")
+<<<<<<< HEAD
 plot_brm_exp1
 #########
 #########
+=======
+
+#########
+
+#Figures - Figure 1
+source("summarySE.R")
+#Figure 1
+Exp1.Figure1.Songs.Data<- summarySE(Data.Exp1.glmer, measurevar="Choice",groupvars=c("Song","Position"))
+Exp1.Figure1.Songs.Data <- na.omit(Exp1.Figure1.Songs.Data)
+
+plot.Exp1.Figure1.Songs<- ggplot(data=Exp1.Figure1.Songs.Data, aes(x=reorder(Song, Choice), y=Choice, fill= Position)) +
+    geom_bar(stat="identity", color="black", position=position_dodge())+
+    geom_errorbar(aes(ymin=Choice-ci, ymax=Choice+ci), width=.2,
+                  position=position_dodge(.9)) +
+    scale_fill_manual(values=c("#E69F00", "#56B4E9")) +
+    ylim(0,1) +
+    theme_bw()
+
+plot.Exp1.Figure1.Songs + theme(axis.text=element_text(size=14), axis.title=element_text(size=12),
+                                axis.title.x = element_blank()) + labs(fill = "Presentation\nPosition") 
+
+ggsave("plot.Exp1.Figure1.Songs.pdf", width=25, height=18, units = c("cm"),
+       dpi=300, device = "pdf")
+
+
+#####
+# ANALYSIS EXPERIMENT 2
+>>>>>>> d5caeba07866d30369312a6606fc9ffd050b0a7a
 # Analysis 1 - Exp2: Critical pairs only - t-test
 Data.Exp2.ttest$Participant= as.factor(Data.Exp2.ttest$id)
 Data.Exp2.ttest$Recognition <- as.factor(Data.Exp2.ttest$Recognition)
 Data.Exp2.ttest$Mean <- as.numeric(Data.Exp2.ttest$Mean)
 
-detach(package:plyr) #if I have problems because loading summarySE 
+detach(package:plyr) #if you have problems because loading summarySE 
 Data.Exp2.ttest %>%
     group_by(Recognition) %>%
     summarize(total= sum(as.numeric(Mean),na.rm=T),
