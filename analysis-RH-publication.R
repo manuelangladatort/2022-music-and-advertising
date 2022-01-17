@@ -86,7 +86,7 @@ plot_brm_exp1 <- ggplot(data_plot_exp1, aes(x= ChoiceCondition, y= BRM_estimate,
     geom_bar(stat="identity",color="black",position=position_dodge()) +
     geom_errorbar(aes(ymin= lower_ci, ymax= higher_ci), width= .2,
                   position=position_dodge(.9)) +
-    scale_fill_manual(values=c("#E69F00", "#56B4E9","#E69F00", "#56B4E9")) +
+    scale_fill_manual(values=c("#56B4E9", "#E69F00","#56B4E9", "#E69F00")) +
     ylab("Model estimates") +
     xlab("Choice condition") +
     ylim(-1.22,1) +
@@ -96,35 +96,13 @@ plot_brm_exp1 <- plot_brm_exp1 + theme(legend.position = "none",
                                        axis.text=element_text(size=12),
                                        axis.title=element_text(size=12), plot.title = element_text(color = "black", size = 12,hjust = 0.5)) +
     ggtitle("Experiment 1")
-
-#########
-#Figures - Figure 1
-source("summarySE.R")
-#Figure 1
-Exp1.Figure1.Songs.Data<- summarySE(Data.Exp1.glmer, measurevar="Choice",groupvars=c("Song","Position"))
-Exp1.Figure1.Songs.Data <- na.omit(Exp1.Figure1.Songs.Data)
-
-plot.Exp1.Figure1.Songs<- ggplot(data=Exp1.Figure1.Songs.Data, aes(x=reorder(Song, Choice), y=Choice, fill= Position)) +
-    geom_bar(stat="identity", color="black", position=position_dodge())+
-    geom_errorbar(aes(ymin=Choice-ci, ymax=Choice+ci), width=.2,
-                  position=position_dodge(.9)) +
-    scale_fill_manual(values=c("#E69F00", "#56B4E9")) +
-    ylim(0,1) +
-    theme_bw()
-
-plot.Exp1.Figure1.Songs + theme(axis.text=element_text(size=14), axis.title=element_text(size=12),
-                                axis.title.x = element_blank()) + labs(fill = "Presentation\nPosition") 
-
-ggsave("plot.Exp1.Figure1.Songs.pdf", width=25, height=18, units = c("cm"),
-       dpi=300, device = "pdf")
-
+plot_brm_exp1
 #########
 #########
 # Analysis 1 - Exp2: Critical pairs only - t-test
 Data.Exp2.ttest$Participant= as.factor(Data.Exp2.ttest$id)
 Data.Exp2.ttest$Recognition <- as.factor(Data.Exp2.ttest$Recognition)
 Data.Exp2.ttest$Mean <- as.numeric(Data.Exp2.ttest$Mean)
-contrasts(Data.Exp2.ttest$Recognition)<-contr.sum
 
 detach(package:plyr) #if I have problems because loading summarySE 
 Data.Exp2.ttest %>%
@@ -171,16 +149,21 @@ r2_bayes(General.brm.Exp2) #R2c= 0.1; R2m= 0.047
 
 # plotting
 data_plot_exp2 <- tibble(
-    ChoiceCondition = as.factor(c("critical-learned","critical-novel","noncritical-learned", "noncritical-novel")),
-    BRM_estimate = as.numeric(c(".42","-.36","0", "0")),
-    lower_ci = as.numeric(c("-0.12 ","-.9","-.39", "-.40")),
-    higher_ci = as.numeric(c(".96",".18",".40", ".40")))
+    ChoiceCondition = as.factor(c("critical-learned","critical-novel","noncritical-learned", "noncritical-novel", "particiipant", "music", "brand")),
+    BRM_estimate = as.numeric(c(".42","-.36","0", "0", ".03", ".71", ".11")),
+    lower_ci = as.numeric(c("-0.12 ","-.9","-.39", "-.40", "0", ".51", ".01")),
+    higher_ci = as.numeric(c(".96",".18",".40", ".40", ".09", ".99", ".24")))
+
+
+
+data_plot_exp2$ChoiceCondition = factor(data_plot_exp2$ChoiceCondition, levels=c("critical-learned","critical-novel","noncritical-learned", "noncritical-novel", "particiipant", "music", "brand")) 
+
 
 plot_brm_exp2 <- ggplot(data_plot_exp2, aes(x= ChoiceCondition, y= BRM_estimate,  fill = ChoiceCondition)) +
     geom_bar(stat="identity",color="black",position=position_dodge()) +
     geom_errorbar(aes(ymin= lower_ci, ymax= higher_ci), width= .2,
                   position=position_dodge(.9)) +
-    scale_fill_manual(values=c("#E69F00", "#56B4E9","#E69F00", "#56B4E9")) +
+    scale_fill_manual(values=c("#56B4E9", "#E69F00","#56B4E9", "#E69F00", "grey","grey","grey")) +
     ylab("Model estimates") +
     xlab("Choice condition") +
     ylim(-1.22,1) +
@@ -188,8 +171,7 @@ plot_brm_exp2 <- ggplot(data_plot_exp2, aes(x= ChoiceCondition, y= BRM_estimate,
 
 plot_brm_exp2 <- plot_brm_exp2 + theme(legend.position = "none",
                       axis.text=element_text(size=12),
-                      axis.title=element_text(size=12), plot.title = element_text(color = "black", size = 12,hjust = 0.5)) +
-    ggtitle("Experiment 2")
+                      axis.title=element_text(size=12), plot.title = element_text(color = "black", size = 12,hjust = 0.5)) 
 
 plots_brm_exp1and2 <- ggarrange(plot_brm_exp1,plot_brm_exp2, ncol=1, nrow=2)
 ggsave("plots_brm_exp1and2.pdf", width=20, height=15, units = c("cm"),
@@ -202,9 +184,8 @@ Data.Exp2.Liking[,names.exp2] <- lapply(Data.Exp2.Liking[,names.exp2] , factor)
 Data.Exp2.Liking
 
 Data.Exp2.Liking <- Data.Exp2.Liking %>%
-    mutate(Preference = ifelse(Response %in% 1:2, "Low",
-                               ifelse(Response %in% 2:3, "Medium", "High")))
-Data.Exp2.Liking$Preference <- factor(Data.Exp2.Liking$Preference, levels = c("Low", "Medium", "High"))
+    mutate(Preference = ifelse(Response %in% 1:3, "Dislike", "Like"))
+Data.Exp2.Liking$Preference <- factor(Data.Exp2.Liking$Preference, levels = c("Dislike", "Like"))
 Data.Exp2.Liking_CR <- Data.Exp2.Liking %>% filter(Clip == "CR")
 Data.Exp2.Liking_CR$Choice <- as.numeric(as.character(Data.Exp2.Liking_CR$Choice))
 
@@ -212,14 +193,6 @@ ANOVA.Exp2.Liking <- lm(Choice ~ Preference*Recognition, data = Data.Exp2.Liking
 Anova(ANOVA.Exp2.Liking, Type="III")
 summary.lm(ANOVA.Exp2.Liking)
 anova_stats(ANOVA.Exp2.Liking)
-
-post.ANOVA.Exp2.MusicInfo.Pref <- glht(ANOVA.Exp2.Liking, lsm(pairwise ~ Preference))
-post.ANOVA.Exp2.MusicInfo.Pref.Holm = summary(post.ANOVA.Exp2.MusicInfo.Pref, test=adjusted("holm"))
-post.ANOVA.Exp2.MusicInfo.Pref.Holm
-
-post.ANOVA.Exp2.MusicInfo.Reco <- glht(ANOVA.Exp2.Liking, lsm(pairwise ~ Recognition))
-post.ANOVA.Exp2.MusicInfo.Reco.Holm = summary(post.ANOVA.Exp2.MusicInfo.Reco, test=adjusted("holm"))
-post.ANOVA.Exp2.MusicInfo.Reco.Holm
 
 detach(package:plyr) #if I have problems because loadfed summarySE first
 Data.Exp2.Liking_CR %>%
@@ -236,50 +209,41 @@ Data.Exp2.Liking_CR %>%
               sd= sd(as.numeric(Choice),na.rm=T),
               count=n())
 
-#Figure 4
-Figure4_MusicInformation_Data<- summarySE(Data.Exp2.Liking_CR,measurevar="Choice",groupvars=c("Preference","Recognition"))
+#Figure 3
+## import summarySE
+Figure3_MusicInformation_Data<- summarySE(Data.Exp2.Liking_CR,measurevar="Choice",groupvars=c("Preference","Recognition"))
 
-plot.Exp2.Figure4 <- ggplot(data=Figure4_MusicInformation_Data, aes(x=factor(Preference), y=Choice, fill= Recognition)) +
+plot.Exp2.Figure3 <- ggplot(data=Figure4_MusicInformation_Data, aes(x=factor(Preference), y=Choice, fill= Recognition)) +
     geom_bar(stat="identity",color="black",position=position_dodge())+
     scale_fill_manual(values=c("#56B4E9","#E69F00")) +
     geom_errorbar(aes(ymin=Choice-ci, ymax=Choice+ci), width=.2,
                   position=position_dodge(.9)) +
     ylim(0,1) +
-    labs(x="Condition", y = "Liking")+
+    labs(x="", y = "Mean choice proportion")+
     theme_bw()
 
-plot.Exp2.Figure4 <- plot.Exp2.Figure4 + 
-    theme(axis.text=element_text(size=12),legend.text=element_text(size=12),
-          axis.title=element_blank())
+plot.Exp2.Figure3 <- plot.Exp2.Figure3 + 
+    theme(axis.text=element_text(size=12),legend.text=element_text(size=12))
    
-ggsave("plot.Exp2.Figure4.pdf", width=20, height=15, units = c("cm"),
+ggsave("plot.Exp2.Figure3.pdf", width=20, height=15, units = c("cm"),
        dpi=300, device = "pdf")
 
 # Analysis 4 - Exp2: individual participant level
-Data.Exp2.Liking_CR_low <- Data.Exp2.Liking_CR %>% filter(Preference == "Low", Recognition == "Learned")
-Data.Exp2.Liking_CR_Med <- Data.Exp2.Liking_CR %>% filter(Preference == "Medium",Recognition == "Learned")
-Data.Exp2.Liking_CR_High <- Data.Exp2.Liking_CR %>% filter(Preference == "High",Recognition == "Learned")
+Data.Exp2.Liking_CR_like <- Data.Exp2.Liking_CR %>% filter(Preference == "Like", Recognition == "Learned")
+Data.Exp2.Liking_CR_dislike <- Data.Exp2.Liking_CR %>% filter(Preference == "Dislike",Recognition == "Learned")
 
-detach(package:plyr) #if I have problems because loadfed summarySE first
-Data.Exp2.Liking_CR_low %>% group_by(Recognition) %>%
-    summarize(mean = mean(as.numeric(Choice), na.rm= TRUE))
-Data.Exp2.Liking_CR_Med %>% group_by(Recognition) %>%
-    summarize(mean = mean(as.numeric(Choice), na.rm= TRUE))
-Data.Exp2.Liking_CR_High %>% group_by(Recognition) %>%
-    summarize(mean = mean(as.numeric(Choice), na.rm= TRUE))
-
-###LOW
-Data.Exp2.Liking_CR_low_plot <- Data.Exp2.Liking_CR_low %>% 
+###Like
+Data.Exp2.Liking_CR_like_plot <- Data.Exp2.Liking_CR_like %>% 
     group_by(id) %>%
     summarize(meanChoice= mean(Choice, na.rm= TRUE))
-Data.Exp2.Liking_CR_low_plot_yesno <- Data.Exp2.Liking_CR_low_plot %>%
+Data.Exp2.Liking_CR_like_plot_yesno <- Data.Exp2.Liking_CR_like_plot %>%
     mutate(  RH = ifelse(meanChoice <= 0.5, "No", "Yes"))
-summary(factor(Data.Exp2.Liking_CR_low_plot_yesno$RH))
+summary(factor(Data.Exp2.Liking_CR_like_plot_yesno$RH))
 
-Data.Exp2.Liking_CR_low_plot_yesno$meanChoice <- ifelse(Data.Exp2.Liking_CR_low_plot_yesno$meanChoice==0, 0.01,
-                                                        Data.Exp2.Liking_CR_low_plot_yesno$meanChoice)
+Data.Exp2.Liking_CR_like_plot_yesno$meanChoice <- ifelse(Data.Exp2.Liking_CR_like_plot_yesno$meanChoice==0, 0.01,
+                                                         Data.Exp2.Liking_CR_like_plot_yesno$meanChoice)
 
-Figure5.plot.MusicInformation_Liking_LOW_yesno <- ggplot(Data.Exp2.Liking_CR_low_plot_yesno, aes(reorder(id, -meanChoice),y= meanChoice, fill=RH)) +
+Figure4.plot.MusicInformation_Liking_Like_yesno <- ggplot(Data.Exp2.Liking_CR_like_plot_yesno, aes(reorder(id, -meanChoice),y= meanChoice, fill=RH)) +
     geom_bar(stat="identity", width=0.2) +
     scale_fill_manual(values=c("#56B4E9","#E69F00")) +
     theme_bw() +
@@ -287,30 +251,30 @@ Figure5.plot.MusicInformation_Liking_LOW_yesno <- ggplot(Data.Exp2.Liking_CR_low
     ylab("Proportion recognised chosen") + 
     xlab("Participants")
 
-Figure5.plot.MusicInformation_Liking_LOW_yesno + 
+Figure4.plot.MusicInformation_Liking_Like_yesno + 
     theme(axis.text=element_text(size=14),legend.text=element_text(size=14),
-          axis.title=element_blank(), axis.line = element_line(colour = "black"),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank())
+            axis.line = element_line(colour = "black"),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank())
 
-ggsave("Figure5.plot.MusicInformation_Liking_LOW_yesno.pdf", width=28, height=6, units = c("cm"),
+ggsave("Figure4.plot.MusicInformation_Liking_yesno.pdf", width=28, height=10, units = c("cm"),
        dpi=300, device = "pdf")
 
-summary(factor(Data.Exp2.Liking_CR_low_plot_yesno$RH)) #No= 43/ Yes= 8
-binom.test(8,43) # 84%
+summary(factor(Data.Exp2.Liking_CR_like_plot_yesno$RH)) #No= 38/ Yes= 89
+binom.test(38,127) # 84%
 
-###Medium
-Data.Exp2.Liking_CR_Med_plot <- Data.Exp2.Liking_CR_Med %>% 
+###Dislike
+Data.Exp2.Liking_CR_dislike_plot <- Data.Exp2.Liking_CR_dislike %>% 
     group_by(id) %>%
     summarize(meanChoice= mean(Choice, na.rm= TRUE))
-Data.Exp2.Liking_CR_Med_plot_yesno <- Data.Exp2.Liking_CR_Med_plot %>%
+Data.Exp2.Liking_CR_dislike_plot_yesno <- Data.Exp2.Liking_CR_dislike_plot %>%
     mutate(  RH = ifelse(meanChoice <= 0.5, "No", "Yes"))
-summary(factor(Data.Exp2.Liking_CR_Med_plot_yesno$RH)) # No= 37 (67%) vs. Yes= 18 (33%)
+summary(factor(Data.Exp2.Liking_CR_dislike_plot_yesno$RH))
 
-Data.Exp2.Liking_CR_Med_plot_yesno$meanChoice <- ifelse(Data.Exp2.Liking_CR_Med_plot_yesno$meanChoice==0, 0.01,
-                                                        Data.Exp2.Liking_CR_Med_plot_yesno$meanChoice)
+Data.Exp2.Liking_CR_dislike_plot_yesno$meanChoice <- ifelse(Data.Exp2.Liking_CR_dislike_plot_yesno$meanChoice==0, 0.01,
+                                                         Data.Exp2.Liking_CR_dislike_plot_yesno$meanChoice)
 
-Figure5.plot.MusicInformation_Liking_MED_yesno <- ggplot(Data.Exp2.Liking_CR_Med_plot_yesno, aes(reorder(id, -meanChoice),y= meanChoice, fill=RH)) +
+Figure4.plot.MusicInformation_disLike_yesno <- ggplot(Data.Exp2.Liking_CR_dislike_plot_yesno, aes(reorder(id, -meanChoice),y= meanChoice, fill=RH)) +
     geom_bar(stat="identity", width=0.2) +
     scale_fill_manual(values=c("#56B4E9","#E69F00")) +
     theme_bw() +
@@ -318,44 +282,14 @@ Figure5.plot.MusicInformation_Liking_MED_yesno <- ggplot(Data.Exp2.Liking_CR_Med
     ylab("Proportion recognised chosen") + 
     xlab("Participants")
 
-Figure5.plot.MusicInformation_Liking_MED_yesno + 
+Figure4.plot.MusicInformation_disLike_yesno + 
     theme(axis.text=element_text(size=14),legend.text=element_text(size=14),
-          axis.title=element_blank(), axis.line = element_line(colour = "black"),
+          axis.line = element_line(colour = "black"),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank())
 
-ggsave("Figure5.plot.MusicInformation_Liking_MED_yesno.pdf", width=28, height=6, units = c("cm"),
+ggsave("Figure4.plot.MusicInformation_dislike_yesno.pdf", width=28, height=10, units = c("cm"),
        dpi=300, device = "pdf")
 
-###HIGH
-Data.Exp2.Liking_CR_High_plot <- Data.Exp2.Liking_CR_High%>% 
-    group_by(id) %>%
-    summarize(meanChoice= mean(Choice, na.rm= TRUE))
-Data.Exp2.Liking_CR_High_plot_yesno <- Data.Exp2.Liking_CR_High_plot %>%
-    mutate(  RH = ifelse(meanChoice <= 0.5, "No", "Yes"))
-summary(factor(Data.Exp2.Liking_CR_High_plot_yesno$RH)) #No= 38 (30%)/ Yes= 89 (70%)
-
-Data.Exp2.Liking_CR_High_plot_yesno$meanChoice <- ifelse(Data.Exp2.Liking_CR_High_plot_yesno$meanChoice==0, 0.01,
-                                                         Data.Exp2.Liking_CR_High_plot_yesno$meanChoice)
-
-Figure5.plot.MusicInformation_Liking_HIGH_yesno <- ggplot(Data.Exp2.Liking_CR_High_plot_yesno, aes(reorder(id, -meanChoice),y= meanChoice, fill=RH)) +
-    geom_bar(stat="identity", width=0.2) +
-    scale_fill_manual(values=c("#56B4E9","#E69F00")) +
-    theme_bw() +
-    ylim(0,1) +
-    ylab("Proportion recognised chosen") + 
-    xlab("Participants")
-
-Figure5.plot.MusicInformation_Liking_HIGH_yesno + 
-    theme(axis.text=element_text(size=14),legend.text=element_text(size=14),
-          axis.title=element_blank(), axis.line = element_line(colour = "black"),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank())
-
-ggsave("Figure5.plot.MusicInformation_Liking_HIGH_yesno.pdf", width=28, height=6, units = c("cm"),
-       dpi=300, device = "pdf")
-
-binom.test(8,43) #low
-binom.test(18,37) #Medium
-binom.test(23,89) #High
-
+summary(factor(Data.Exp2.Liking_CR_dislike_plot_yesno$RH)) #No= 63/ Yes= 17
+binom.test(63,80) # 79
