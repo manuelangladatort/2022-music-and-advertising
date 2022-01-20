@@ -27,7 +27,6 @@ source("summarySE.R")
 # load data
 ## Exp 1:
 Data.Exp1.ttest <- read_excel("data/Data.Exp1.ttest.xlsx") 
-Data.Exp1.brm <- read_excel("data/Data.Exp1.brm.xlsx") 
 ## Exp 2: 
 Data.Exp2.ttest <- read_excel("data/Data.Exp2.ttest.xlsx") 
 Data.Exp2.brm <- read_excel("data/Data.Exp2.brm.xlsx")
