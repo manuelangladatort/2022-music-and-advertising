@@ -35,14 +35,14 @@ Data.Exp2.Liking <- read_excel("data/Data.Exp2.Liking.xlsx")
 
 
 # Analysis 1 (Experiment 1): Critical pairs only - t-test
-Data.Exp1.ttest$Participant= as.factor(Data.Exp1.ttest$id)
+Data.Exp1.ttest$Participant<- as.factor(Data.Exp1.ttest$id)
 Data.Exp1.ttest$Recognition <- as.factor(Data.Exp1.ttest$Recognition)
 Data.Exp1.ttest$Mean <- as.numeric(Data.Exp1.ttest$Mean)
 
 Data.Exp1.ttest %>%
     group_by(Recognition) %>%
     summarize(
-              mean= mean(as.numeric(Mean),na.rm=T),
+              mean = mean(as.numeric(Mean),na.rm=T),
               sd= sd(as.numeric(Mean),na.rm=T),
               count= n()
               )
@@ -190,4 +190,3 @@ Data.Exp2.Liking_CR$Recognition <- as.factor(Data.Exp2.Liking_CR$Recognition)
 lm.Exp2.Liking <- lm(Choice ~ Response*Recognition, data = Data.Exp2.Liking_CR)
 Anova(lm.Exp2.Liking, Type="III")
 anova_stats(lm.Exp2.Liking)
-
