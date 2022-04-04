@@ -115,9 +115,9 @@ r2_bayes(General.brm.Exp2) #R2c= 0.1; R2m= 0.047
 # plotting
 data_plot_exp2 <- tibble(
     ChoiceCondition = as.factor(c("critical-learned","critical-novel","noncritical-learned", "noncritical-novel", "particiipant", "music", "brand")),
-    BRM_estimate = as.numeric(c(".42","-.36","0", "0", ".03", ".71", ".11")),
-    lower_ci = as.numeric(c("-0.12 ","-.9","-.39", "-.40", "0", ".51", ".01")),
-    higher_ci = as.numeric(c(".96",".18",".40", ".40", ".09", ".99", ".24")))
+    BRM_estimate = as.numeric(c(".41","-.37","-.01", "-.01", ".03", ".71", ".11")),
+    lower_ci = as.numeric(c("-0.13 ","-.91","-.39", "-.39", "0", ".51", ".01")),
+    higher_ci = as.numeric(c(".97",".18",".38", ".38", ".09", "1", ".24")))
 
 data_plot_exp2$ChoiceCondition = factor(data_plot_exp2$ChoiceCondition, levels=c("critical-learned","critical-novel","noncritical-learned", "noncritical-novel", "particiipant", "music", "brand")) 
 
@@ -156,21 +156,26 @@ plot_liking = ggplot(data_sum_liking,
                      aes(x=as.factor(Response), 
                          y=mean_choice, 
                          group=Recognition, 
+                         fill=Recognition,
                          color=Recognition)
                      ) + 
-    geom_errorbar(aes(ymin=mean_choice-se_choice, ymax=mean_choice+se_choice), 
-                  width=.1,
-                  size = 0.7) +
+    # geom_errorbar(aes(ymin=mean_choice-se_choice, ymax=mean_choice+se_choice), 
+    #               width=.1,
+    #               size = 0.7) +
+    geom_ribbon(aes(ymin=mean_choice-se_choice, 
+                    ymax=mean_choice+se_choice),  alpha = 0.5) +
     geom_line(aes(color=Recognition), size = 0.8) +
     ylab("Mean brand choice") +
     xlab("Liking Scale") +
+    scale_fill_manual(values=c("#56B4E9", "#E69F00")) +
     scale_color_manual(values=c("#56B4E9", "#E69F00")) +
-    geom_point(aes(color=Recognition)) +
+    geom_point(size = 1, colour = "white", alpha = 1) + 
     theme_bw() + 
     theme(
         axis.text=element_text(size=12),
         axis.title=element_text(size=12), 
-        legend.text=element_text(size=12)
+        legend.text=element_text(size=12),
+        aspect.ratio=1
         ) 
 
 # to save
